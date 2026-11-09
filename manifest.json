@@ -1,0 +1,9 @@
+{
+  "name": "喝水日記",
+  "short_name": "喝水日記",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b2233",
+  "theme_color": "#0b2233",
+  "icons": [{ "src": "./icon.png", "sizes": "180x180", "type": "image/png" }]
+}

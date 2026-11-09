@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>喝水日記 💧</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="喝水日記">
+<meta name="theme-color" content="#0b2233">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<style>
+  :root{
+    --bg1:#0b2233; --bg2:#123a52; --card:rgba(255,255,255,.07);
+    --line:rgba(255,255,255,.12); --txt:#e8f4fa; --sub:#9cc3d8;
+    --cyan:#38c8ff; --mint:#4be3b6; --warn:#ffd166;
+    --typecols:48px 1fr 58px 76px; --cupcols:1fr 56px 112px 86px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;
+    background:linear-gradient(160deg,var(--bg1),var(--bg2));
+    min-height:100vh; color:var(--txt);
+    padding:calc(12px + env(safe-area-inset-top)) 14px 0;
+    max-width:520px; margin:0 auto;
+  }
+  main{padding-bottom:calc(96px + env(safe-area-inset-bottom));}
+  header{display:flex; justify-content:space-between; align-items:baseline; padding:4px 4px 10px;}
+  header h1{font-size:22px; margin:0;}
+  header .date{color:var(--sub); font-size:13px; white-space:nowrap;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:18px;
+    padding:16px; margin-bottom:12px;}
+  /* 分頁 */
+  .page{display:none;}
+  .page.on{display:block;}
+  #tabbar{position:fixed; left:0; right:0; bottom:0; z-index:50;
+    background:rgba(9,25,38,.94); backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border-top:1px solid var(--line);
+    padding-bottom:env(safe-area-inset-bottom);
+    display:flex; justify-content:center;}
+  #tabbar .tabs{display:flex; width:100%; max-width:520px;}
+  .tab{flex:1; position:relative; background:none; border:none; color:var(--sub);
+    font-family:inherit; font-size:11px; padding:7px 0 5px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:2px;}
+  .tab .ic{font-size:22px; line-height:1.15;}
+  .tab.on{color:var(--cyan); font-weight:700;}
+  .tab.on::before{content:''; position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:28px; height:3px; border-radius:2px; background:var(--cyan);}
+  /* 進度環 */
+  .ring-card{display:flex; flex-direction:column; justify-content:center; align-items:center;
+    position:relative; padding:22px 22px 16px; gap:8px;}
+  svg.ring{width:230px; height:230px;}
+  .ring-bg{fill:none; stroke:rgba(255,255,255,.09); stroke-width:16;}
+  .ring-fg{fill:none; stroke:url(#grad); stroke-width:16; stroke-linecap:round;
+    stroke-dasharray:565.49; stroke-dashoffset:565.49;
+    transition:stroke-dashoffset .6s ease;}
+  .ring-text{position:absolute; left:0; right:0; top:22px; height:230px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; pointer-events:none;}
+  .ring-text .big{font-size:46px; font-weight:700; line-height:1.1;}
+  .ring-text .unit{font-size:14px; color:var(--sub);}
+  .ring-text .pct{margin-top:6px; font-size:13px; color:var(--mint);}
+  .realrow{font-size:13px; color:var(--sub); text-align:center;}
+  .realrow b{color:var(--txt); font-weight:600; font-size:15px;}
+  /* 飲品標籤 */
+  .typeRow{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;}
+  .tag{border:1px solid var(--line); background:rgba(255,255,255,.06); color:var(--txt);
+    border-radius:999px; padding:8px 12px; font-size:14px; cursor:pointer;}
+  .tag.on{background:rgba(56,200,255,.28); border-color:var(--cyan); font-weight:600;}
+  /* 快速按鈕 */
+  .qgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(72px,1fr)); gap:10px;}
+  .qbtn{border:1px solid var(--line); background:rgba(56,200,255,.12); color:var(--txt);
+    border-radius:14px; padding:14px 0 10px; font-size:15px; text-align:center; cursor:pointer;}
+  .qbtn .ml{display:block; font-size:11px; color:var(--sub); margin-top:2px;}
+  .qbtn:active{transform:scale(.94); background:rgba(56,200,255,.3);}
+  .customrow{display:flex; gap:10px; margin-top:12px; align-items:stretch;}
+  .customrow input{flex:1; border:1px solid var(--line); border-radius:12px; background:rgba(0,0,0,.2);
+    color:var(--txt); padding:10px 12px; font-size:16px; min-width:0;}
+  .btn{border:1px solid var(--line); background:rgba(255,255,255,.1); color:var(--txt);
+    border-radius:12px; padding:10px 16px; font-size:15px; cursor:pointer;}
+  .btn:active{transform:scale(.96);}
+  .btn.primary{background:rgba(75,227,182,.2); border-color:rgba(75,227,182,.5);}
+  .btn.warn{background:rgba(255,209,102,.14);}
+  h2{font-size:15px; margin:0 0 10px; color:var(--sub); font-weight:600;}
+  /* 紀錄列表 */
+  .listhead{display:flex; justify-content:space-between; align-items:center; gap:10px;
+    flex-wrap:wrap; margin-bottom:10px;}
+  .listhead h2{margin:0;}
+  .daynav{display:flex; align-items:center; gap:6px; flex:none;}
+  .daynav button{border:1px solid var(--line); background:rgba(255,255,255,.08); color:var(--txt);
+    border-radius:8px; padding:4px 10px; font-size:13px; cursor:pointer;}
+  .daynav button:disabled{opacity:.3;}
+  .daynav span{font-size:13px; color:var(--sub); min-width:64px; text-align:center;}
+  .daynav input[type=date]{border:1px solid var(--line); border-radius:8px;
+    background:rgba(0,0,0,.2); color:var(--txt); padding:4px 6px; font-size:12px;}
+  #listToday{max-height:260px; overflow-y:auto;}
+  #listDay{max-height:46vh; overflow-y:auto;}
+  .row{display:flex; justify-content:space-between; align-items:center; gap:8px;
+    padding:9px 6px; border-bottom:1px solid rgba(255,255,255,.06); font-size:15px; cursor:pointer;}
+  .row .t{color:var(--sub); width:52px; flex:none;}
+  .row .nm{flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .row .sub{font-size:12px; color:var(--sub); flex:none;}
+  .row .x{color:#ff8a8a; font-size:19px; padding:2px 10px; cursor:pointer; flex:none;}
+  .empty{color:var(--sub); font-size:14px; text-align:center; padding:14px 0;}
+  /* 編輯／補登 */
+  #editCard{display:none;}
+  .editgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .editgrid label{font-size:12px; color:var(--sub); display:flex; flex-direction:column; gap:4px;}
+  .editgrid input,.editgrid select{border:1px solid var(--line); border-radius:10px;
+    background:rgba(0,0,0,.2); color:var(--txt); padding:9px; font-size:15px;}
+  /* 統計 */
+  .stats{display:flex; gap:14px; align-items:flex-end;}
+  .streak{font-size:15px; white-space:nowrap;}
+  .streak b{font-size:30px; color:var(--warn);}
+  .bars{flex:1; display:flex; gap:6px; align-items:flex-end; height:110px;}
+  .barcol{flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%;
+    justify-content:flex-end; cursor:pointer;}
+  .bar{width:100%; border-radius:6px 6px 3px 3px; background:rgba(56,200,255,.35); min-height:3px;}
+  .bar.met{background:linear-gradient(180deg,var(--mint),var(--cyan));}
+  .barcap{font-size:11px; color:var(--sub);}
+  .cafrow{display:flex; align-items:center; gap:8px; padding:5px 0; font-size:13px; color:var(--sub);}
+  .cafrow span{flex:none; text-align:right; white-space:nowrap;}
+  .cafrow span.cafld{width:46px;}
+  .cafrow span.cafval{width:64px;}
+  .cafrow i{flex:1; height:10px; background:rgba(255,255,255,.08); border-radius:5px; overflow:hidden;}
+  .cafrow i b{display:block; height:100%; background:linear-gradient(90deg,#ffb35c,#ff7b54); border-radius:5px;}
+  /* 設定 */
+  details.card summary{font-size:15px; color:var(--sub); font-weight:600; cursor:pointer;}
+  .setrow{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 0;
+    border-bottom:1px solid rgba(255,255,255,.06); font-size:15px;}
+  .setrow:last-of-type{border-bottom:none;}
+  .setrow input[type=number]{width:92px; border:1px solid var(--line); border-radius:10px;
+    background:rgba(0,0,0,.2); color:var(--txt); padding:8px; font-size:15px; text-align:right;}
+  .setrow input[type=time]{border:1px solid var(--line); border-radius:10px;
+    background:rgba(0,0,0,.2); color:var(--txt); padding:7px; font-size:14px;}
+  .setrow select{border:1px solid var(--line); border-radius:10px; background:rgba(0,0,0,.2);
+    color:var(--txt); padding:8px;}
+  .setrow .small{font-size:12px; color:var(--sub); display:block; margin-top:3px;}
+  .hint{font-size:12px; color:var(--sub); line-height:1.6; margin:10px 0 0;}
+  .foot{text-align:center; color:var(--sub); font-size:12px; margin:16px 0 4px;}
+  .seth{font-size:14px; color:var(--mint); margin:16px 0 6px;}
+  .mini{border:1px solid var(--line); background:rgba(255,255,255,.08); color:var(--txt);
+    border-radius:8px; padding:5px 9px; font-size:13px; cursor:pointer;}
+  .cbtns{display:flex; gap:4px; flex-wrap:wrap;}
+  .cbtns .mini{width:26px; padding:5px 0; text-align:center;}
+  /* 飲品種類設定表 */
+  .thead{display:grid; grid-template-columns:var(--typecols); gap:8px;
+    font-size:11px; color:var(--sub); padding:4px 0 2px;}
+  .thead.cups{grid-template-columns:var(--cupcols);}
+  .trow{display:grid; grid-template-columns:var(--typecols); gap:8px; align-items:center;
+    padding:6px 0; border-bottom:1px solid rgba(255,255,255,.06);}
+  .trow input{width:100%; border:1px solid var(--line); border-radius:8px; background:rgba(0,0,0,.2);
+    color:var(--txt); padding:7px 6px; font-size:14px;}
+  /* 杯子設定表 */
+  .crow{display:grid; grid-template-columns:var(--cupcols); gap:8px; align-items:center;
+    padding:6px 0; border-bottom:1px solid rgba(255,255,255,.06);}
+  .crow input,.crow select{width:100%; border:1px solid var(--line); border-radius:8px;
+    background:rgba(0,0,0,.2); color:var(--txt); padding:7px 6px; font-size:14px;}
+  .crow select{font-size:12px; padding:7px 4px;}
+  /* toast（位於分頁列上方） */
+  #toast{position:fixed; left:50%; transform:translateX(-50%) translateY(30px);
+    bottom:calc(88px + env(safe-area-inset-bottom));
+    background:#0e5f86; border:1px solid var(--cyan); color:#fff; padding:12px 20px;
+    border-radius:14px; font-size:16px; opacity:0; pointer-events:none;
+    transition:all .3s ease; z-index:99; box-shadow:0 8px 30px rgba(0,0,0,.5); max-width:86%;}
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  #toast.remind{background:#b3541e; border-color:var(--warn);}
+</style>
+</head>
+<body>
+<header>
+  <h1>💧 喝水日記</h1>
+  <span class="date" id="dateLabel"></span>
+</header>
+
+<main>
+<!-- ═══════════ 今日 ═══════════ -->
+<section class="page on" id="page-today">
+  <section class="card ring-card">
+    <svg class="ring" viewBox="0 0 220 220">
+      <defs>
+        <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#38c8ff"/><stop offset="100%" stop-color="#4be3b6"/>
+        </linearGradient>
+      </defs>
+      <circle class="ring-bg" cx="110" cy="110" r="90"/>
+      <circle class="ring-fg" id="ringFg" cx="110" cy="110" r="90" transform="rotate(-90 110 110)"/>
+    </svg>
+    <div class="ring-text">
+      <div><span class="big" id="sumToday">0</span> <span class="unit">ml 有效</span></div>
+      <div class="unit">目標 <span id="goalLabel">2000</span> ml</div>
+      <div class="pct" id="pctLabel">0%</div>
+    </div>
+    <div class="realrow">實際喝 <b id="realToday">0</b> ml ・ ☕ 咖啡因 <b id="cafToday">0</b> mg / <span id="cafLimitLabel">400</span></div>
+  </section>
+
+  <section class="card">
+    <h2>快速紀錄</h2>
+    <div class="typeRow" id="typeRow"></div>
+    <div class="qgrid" id="qgrid"></div>
+    <div class="customrow">
+      <input type="number" id="customAmt" inputmode="numeric" placeholder="自訂 ml" min="1" max="5000">
+      <button class="btn primary" id="addCustom">加</button>
+      <button class="btn warn" id="undoBtn">復原</button>
+    </div>
+    <p class="hint">先選上面飲品種類，再按杯子或輸入量。環形與統計以「有效水量」計算。</p>
+  </section>
+
+  <section class="card">
+    <div class="listhead"><h2>今日紀錄（點列可修改、✕ 刪除）</h2></div>
+    <div id="listToday"></div>
+  </section>
+</section>
+
+<!-- ═══════════ 紀錄 ═══════════ -->
+<section class="page" id="page-records">
+  <section class="card">
+    <div class="listhead"><h2>📅 每日紀錄（點列可修改、✕ 刪除）</h2>
+      <div class="daynav">
+        <button id="dayPrev" title="前一天">◀</button>
+        <span id="dayLabel">今日</span>
+        <button id="dayNext" title="後一天">▶</button>
+        <input type="date" id="dayPick" title="跳到指定日期">
+      </div>
+    </div>
+    <div id="listDay"></div>
+  </section>
+
+  <section class="card" id="editCard">
+    <h2 id="editTitle">✏️ 修改這筆紀錄</h2>
+    <div class="editgrid">
+      <label>日期<input type="date" id="edDate"></label>
+      <label>時間<input type="time" id="edTime"></label>
+      <label>毫升<input type="number" id="edMl" inputmode="numeric" min="1" max="5000"></label>
+      <label>飲品<select id="edType"></select></label>
+    </div>
+    <div class="customrow" style="margin-top:10px">
+      <button class="btn primary" id="edSave">儲存</button>
+      <button class="btn" id="edCancel">取消</button>
+    </div>
+    <p class="hint">儲存時會依「目前設定」重算係數與咖啡因。</p>
+  </section>
+
+  <section class="card">
+    <h2>📝 補登</h2>
+    <div class="editgrid">
+      <label>日期<input type="date" id="bkDate"></label>
+      <label>時間<input type="time" id="bkTime"></label>
+      <label>毫升<input type="number" id="bkAmt" inputmode="numeric" min="1" max="5000" placeholder="例 500"></label>
+      <label>飲品<select id="bkType"></select></label>
+    </div>
+    <button class="btn primary" id="bkAdd" style="margin-top:10px">補登這一筆</button>
+    <p class="hint">飲品預設為今日頁目前選取的種類，可在這裡另選，不會改到今日頁的選擇；係數與咖啡因依所選飲品的目前設定自動計算。時間不可選未來。</p>
+  </section>
+</section>
+
+<!-- ═══════════ 統計 ═══════════ -->
+<section class="page" id="page-stats">
+  <section class="card">
+    <h2>近七日有效水量</h2>
+    <div class="stats">
+      <div class="streak">🔥<br><b id="streakNum">0</b><br>連續天</div>
+      <div class="bars" id="bars"></div>
+    </div>
+    <p class="hint">點長條會切到紀錄頁並顯示那一天（今日顯示為「今」）。</p>
+  </section>
+  <section class="card">
+    <h2>近七日每日咖啡因</h2>
+    <div id="caf7"></div>
+    <p class="hint">每日上限 <span id="cafLimitLabel2">400</span> mg，超過時每天會提醒一次。</p>
+  </section>
+</section>
+
+<!-- ═══════════ 設定 ═══════════ -->
+<section class="page" id="page-settings">
+  <details class="card" open>
+    <summary>⚙️ 一般</summary>
+    <div class="setrow"><label>每日目標 (ml)<span class="small">以有效水量計算；依體重建議：<span id="goalHint" style="white-space:nowrap">約 體重×33 ml</span></span></label>
+      <input type="number" id="setGoal" inputmode="numeric" min="500" max="6000"></div>
+    <div class="setrow"><label>體重 (kg)</label>
+      <input type="number" id="setWeight" inputmode="decimal" min="20" max="200"></div>
+    <div class="setrow"><button class="btn" id="suggestBtn">算出建議目標</button>
+      <span class="small" id="suggestInfo">依體重×33ml/kg 計算</span></div>
+    <div class="setrow"><label>提醒間隔<span class="small">頁面開著時才會提醒（iOS 限制）</span></label>
+      <select id="setInterval">
+        <option value="30">30 分</option><option value="45">45 分</option>
+        <option value="60">60 分</option><option value="90">90 分</option><option value="120">120 分</option>
+      </select></div>
+    <div class="setrow"><label>免打擾 從</label><input type="time" id="setQStart" value="23:00"></div>
+    <div class="setrow"><label>免打擾 到</label><input type="time" id="setQEnd" value="07:00"></div>
+    <div class="setrow"><label>系統通知<span class="small">加入主畫面後才可撥動開關</span></label>
+      <button class="btn" id="notifyBtn">開啟通知</button></div>
+  </details>
+
+  <details class="card" open>
+    <summary>☕ 咖啡因</summary>
+    <div class="setrow"><label>每日上限 (mg)</label>
+      <input type="number" id="setCafLimit" inputmode="numeric" min="50" max="2000"></div>
+    <div class="setrow"><label>咖啡因截止時間<span class="small">這時間之後記錄含咖啡因飲品會提醒可能影響睡眠</span></label>
+      <div style="display:flex; gap:8px; align-items:center; flex:none;">
+        <input type="time" id="setCafCutoff" value="15:00" style="width:104px;">
+        <label id="cafOnWrap" style="font-size:13px; color:var(--sub); display:flex; align-items:center; gap:4px; white-space:nowrap;">
+          <input type="checkbox" id="setCafOn">開啟</label>
+      </div></div>
+  </details>
+
+  <details class="card" open>
+    <summary>🍵 飲品種類與係數</summary>
+    <div class="thead"><span>圖示</span><span>名稱</span><span>係數</span><span>咖啡因 mg</span></div>
+    <div id="typeRows"></div>
+    <div style="margin-top:10px;"><button class="mini" id="resetTypesBtn">恢復預設</button></div>
+    <p class="hint">係數與咖啡因為一般參考值，可自行調整，不是醫療建議。<br>
+      咖啡因（mg）＝ 飲用量（ml）× 每 100 ml 咖啡因（mg）÷ 100，例：咖啡 240 ml × 40 ÷ 100 ＝ 96 mg。<br>
+      有效水量（ml）＝ 飲用量（ml）× 係數，例：咖啡 240 ml × 0.8 ＝ 192 ml。</p>
+  </details>
+
+  <details class="card" open>
+    <summary>🥤 快速杯子（最多 8 個）</summary>
+    <div class="thead cups"><span>名稱</span><span>ml</span><span>預設飲品</span><span>操作</span></div>
+    <div id="cupRows"></div>
+    <div style="margin-top:10px;"><button class="mini" id="addCupBtn">新增杯子</button></div>
+  </details>
+
+  <details class="card" open>
+    <summary>🗂️ 資料</summary>
+    <div class="setrow"><button class="btn" id="exportBtn">匯出 CSV 備份</button>
+      <button class="btn" id="importBtn">匯入 CSV</button></div>
+    <input type="file" id="importFile" accept=".csv,text/csv" style="display:none;">
+    <div class="setrow"><button class="btn warn" id="resetBtn">清除全部資料</button>
+      <span class="small">會一併清除設定</span></div>
+  </details>
+
+  <p class="hint" style="text-align:center; margin-top:14px">版本 <b>v2.3</b>：含飲品種類與咖啡因統計、分頁版面</p>
+  <p class="hint">📲 加入主畫面：Safari 分享按鈕 →「加入主畫面」。資料只存在這支手機裡，刪 App 才會不見；建議定期匯出 CSV 備份。</p>
+</section>
+
+<p class="foot">💧 開著頁面時，每 <span id="ivLabel">60</span> 分鐘提醒你喝水 ・ 版本 <span id="verLabel">v2.3</span></p>
+</main>
+
+<nav id="tabbar">
+  <div class="tabs">
+    <button class="tab on" id="tab-today"><span class="ic">💧</span>今日</button>
+    <button class="tab" id="tab-records"><span class="ic">📅</span>紀錄</button>
+    <button class="tab" id="tab-stats"><span class="ic">📊</span>統計</button>
+    <button class="tab" id="tab-settings"><span class="ic">⚙️</span>設定</button>
+  </div>
+</nav>
+
+<div id="toast"></div>
+
+<script>
+const DB_NAME='waterDB', STORE='entries';
+const SET_KEY='waterSettings', FLAG_KEY='waterFlags', TAB_KEY='waterTab';
+const TABS=['today','records','stats','settings'];
+const WD=['日','一','二','三','四','五','六'];
+const DEF_TYPES=[
+  {id:'water', name:'白開水',     icon:'💧', factor:1.0, caf:0},
+  {id:'tea',   name:'茶',         icon:'🍵', factor:0.9, caf:20},
+  {id:'herbal',name:'無咖啡因茶', icon:'🌿', factor:1.0, caf:0},
+  {id:'coffee',name:'咖啡',       icon:'☕', factor:0.8, caf:40},
+  {id:'other', name:'其他',       icon:'🧋', factor:0.7, caf:0},
+];
+const DEF_CUPS=[
+  {name:'🥛', ml:120, drink:'follow'},{name:'🥤', ml:240, drink:'follow'},
+  {name:'🧴', ml:360, drink:'follow'},{name:'🍶', ml:500, drink:'follow'},
+];
+const TYPE_IDS=DEF_TYPES.map(t=>t.id);
+const DEF={goal:2000, weight:'', interval:60, qStart:'23:00', qEnd:'07:00',
+  cafLimit:400, cafCutoff:'15:00', cafCutoffOn:true, lastType:'water'};
+
+let db=null, lastRemind=0, toastTimer=null, viewDate=null, editId=null;
+
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,'0');
+const dkey=ts=>{const d=new Date(ts);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());};
+const fmtTime=ts=>{const d=new Date(ts);return pad(d.getHours())+':'+pad(d.getMinutes());};
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const numOr=(v,d)=>{const n=typeof v==='number'?v:parseFloat(v);return isFinite(n)?n:d;};
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const round1=v=>Math.round(v*10)/10, round4=v=>Math.round(v*1e4)/1e4;
+const parseHM=s=>{const p=String(s||'0:0').split(':');return (+p[0])*60+(+p[1]);};
+const tsHM=ts=>{const d=new Date(ts);return d.getHours()*60+d.getMinutes();};
+const fmtNum=v=>{const r=round1(v);return Number.isInteger(r)?String(r):r.toFixed(1);};
+const clone=o=>JSON.parse(JSON.stringify(o));
+
+/* ===== 分頁（記住上次所在分頁，存 localStorage 鍵 waterTab） ===== */
+function switchTab(t){
+  if(!TABS.includes(t))t='today';
+  try{localStorage.setItem(TAB_KEY,t);}catch(e){}
+  TABS.forEach(k=>{
+    $('page-'+k).classList.toggle('on',k===t);
+    $('tab-'+k).classList.toggle('on',k===t);
+  });
+  closeEdit();
+  if(t==='records')syncBkTypes(true);
+  window.scrollTo(0,0);
+}
+
+/* ===== 設定（沿用 waterSettings，新欄位用預設值補上） ===== */
+function normTypes(arr){
+  return DEF_TYPES.map(d=>{
+    const t=(Array.isArray(arr)?arr.find(x=>x&&x.id===d.id):null)||{};
+    return {id:d.id,
+      name:(typeof t.name==='string'&&t.name.trim())?t.name.trim().slice(0,12):d.name,
+      icon:(typeof t.icon==='string'&&t.icon.trim())?t.icon.trim().slice(0,4):d.icon,
+      factor:clamp(round4(numOr(t.factor,d.factor)),0,3),
+      caf:clamp(round1(numOr(t.caf,d.caf)),0,999)};
+  });
+}
+function normCups(arr){
+  const okDrink=t=>t==='follow'||TYPE_IDS.includes(t);
+  if(!Array.isArray(arr))return clone(DEF_CUPS);
+  const out=[];
+  for(const c of arr){
+    if(!c)continue;
+    const ml=Math.round(numOr(c.ml,0));
+    if(ml<1||ml>5000)continue;
+    out.push({name:(typeof c.name==='string'&&c.name.trim())?c.name.trim().slice(0,8):'杯子',
+      ml, drink:okDrink(c.drink)?c.drink:'follow'});
+    if(out.length>=8)break;
+  }
+  return out.length?out:clone(DEF_CUPS);
+}
+function getSet(){
+  let s={};
+  try{const p=JSON.parse(localStorage.getItem(SET_KEY)||'{}'); if(p&&typeof p==='object')s=p;}catch(e){}
+  const out=Object.assign({},DEF,s);
+  out.goal=clamp(Math.round(numOr(s.goal,DEF.goal)),500,6000);
+  out.cafLimit=clamp(Math.round(numOr(s.cafLimit,DEF.cafLimit)),50,2000);
+  out.weight=(typeof s.weight==='number')?s.weight:(s.weight||'');
+  const iv=+s.interval;
+  out.interval=(isFinite(iv)&&iv>0&&[30,45,60,90,120].includes(iv))?iv:60;
+  if(!/^([01]?\d|2[0-3]):[0-5]\d$/.test(out.cafCutoff||''))out.cafCutoff='15:00';
+  if(!/^([01]?\d|2[0-3]):[0-5]\d$/.test(out.qStart||''))out.qStart='23:00';
+  if(!/^([01]?\d|2[0-3]):[0-5]\d$/.test(out.qEnd||''))out.qEnd='07:00';
+  out.cafCutoffOn=('cafCutoffOn' in s)?!!s.cafCutoffOn:DEF.cafCutoffOn;
+  out.types=normTypes(s.types);
+  out.cups=normCups(s.cups);
+  if(!out.types.some(t=>t.id===out.lastType))out.lastType='water';
+  return out;
+}
+function saveSet(st){localStorage.setItem(SET_KEY,JSON.stringify(st));}
+function updateSet(mut){const st=getSet(); mut(st); saveSet(st); return st;}
+function getFlags(){try{const f=JSON.parse(localStorage.getItem(FLAG_KEY)||'{}'); return (f&&typeof f==='object')?f:{};}catch(e){return {};}}
+function setFlags(f){localStorage.setItem(FLAG_KEY,JSON.stringify(f));}
+function typeById(st,id){return st.types.find(t=>t.id===id)||st.types[0];}
+
+/* ===== IndexedDB（v1 只有 ts、ml；v2 多 type、factor、caf；舊紀錄讀取時補預設，不改寫） ===== */
+function openDB(){return new Promise((res,rej)=>{
+  const r=indexedDB.open(DB_NAME,1);
+  r.onupgradeneeded=()=>{r.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});};
+  r.onsuccess=()=>{db=r.result;res();};
+  r.onerror=()=>rej(r.error);
+});}
+function addEntry(e){return new Promise((res,rej)=>{
+  const r=db.transaction(STORE,'readwrite').objectStore(STORE).add(e);
+  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+function putEntry(e){return new Promise((res,rej)=>{
+  const r=db.transaction(STORE,'readwrite').objectStore(STORE).put(e);
+  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+function addMany(list){return new Promise((res,rej)=>{
+  const tx=db.transaction(STORE,'readwrite'), s=tx.objectStore(STORE);
+  list.forEach(e=>s.add(e));
+  tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); tx.onabort=()=>rej(tx.error);});}
+function delEntry(id){return new Promise((res,rej)=>{
+  const r=db.transaction(STORE,'readwrite').objectStore(STORE).delete(id);
+  r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});}
+function getAll(){return new Promise((res,rej)=>{
+  const r=db.transaction(STORE,'readonly').objectStore(STORE).getAll();
+  r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error);});}
+function clearAll(){return new Promise((res,rej)=>{
+  const r=db.transaction(STORE,'readwrite').objectStore(STORE).clear();
+  r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});}
+/* 舊紀錄（無 type/factor/caf）一律視為白開水：factor 1.0、caf 0 */
+function normEntry(e){
+  const okType=e&&TYPE_IDS.includes(e.type);
+  return {id:e.id, ts:numOr(e&&e.ts,0), ml:Math.round(numOr(e&&e.ml,0)),
+    type:okType?e.type:'water',
+    factor:okType?clamp(numOr(e.factor,1),0,3):1,
+    caf:okType?clamp(round1(numOr(e.caf,0)),0,99999):0};
+}
+const effOf=e=>e.ml*e.factor;
+
+/* ===== toast／音效／定時提醒（任何分頁都照常運作） ===== */
+function showToast(msg,cls){
+  const t=$('toast'); t.textContent=msg; t.className='show'+(cls?' '+cls:'');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{t.className=cls||'';},4000);
+}
+let actx=null;
+function beep(){
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==='suspended')actx.resume();
+    const play=(f,t0,d)=>{const o=actx.createOscillator(),g=actx.createGain();
+      o.type='sine';o.frequency.value=f;
+      g.gain.setValueAtTime(0.001,t0);
+      g.gain.exponentialRampToValueAtTime(0.25,t0+0.03);
+      g.gain.exponentialRampToValueAtTime(0.001,t0+d);
+      o.connect(g).connect(actx.destination);o.start(t0);o.stop(t0+d+0.05);};
+    const t=actx.currentTime;play(880,t,0.18);play(1175,t+0.2,0.22);
+  }catch(e){}
+}
+function inQuiet(st){
+  const n=new Date(),t=n.getHours()*60+n.getMinutes(),a=parseHM(st.qStart),b=parseHM(st.qEnd);
+  if(a===b)return false;
+  return a<b ? (t>=a&&t<b) : (t>=a||t<b);
+}
+async function doRemind(){
+  const st=getSet();
+  beep();
+  try{if(navigator.vibrate)navigator.vibrate([200,100,200]);}catch(e){}
+  showToast('💧 該喝水囉～已經 '+st.interval+' 分鐘沒喝水了','remind');
+  try{
+    if('Notification' in window && Notification.permission==='granted'){
+      const reg=await navigator.serviceWorker.getRegistration();
+      if(reg)reg.showNotification('該喝水囉 💧',{body:'距上次喝水已超過 '+st.interval+' 分鐘',icon:'icon.png',tag:'water'});
+    }
+  }catch(e){}
+}
+async function checkRemind(){
+  const st=getSet();
+  if(inQuiet(st))return;
+  const all=(await getAll()).map(normEntry);
+  const today=dkey(Date.now());
+  const todayE=all.filter(e=>dkey(e.ts)===today);
+  const ref=Math.max(lastRemind, todayE.length?Math.max(...todayE.map(e=>e.ts)):0,
+    new Date(new Date().setHours(0,0,0,0)).getTime());
+  if(Date.now()-ref >= st.interval*60000){lastRemind=Date.now();await doRemind();}
+}
+
+/* ===== 咖啡因提醒：每日上限每天提醒一次；截止時間之後記錄含咖啡因飲品提醒 ===== */
+async function afterWarn(e){
+  const st=getSet();
+  const day=dkey(e.ts);
+  const all=(await getAll()).map(normEntry);
+  const caf=all.filter(x=>dkey(x.ts)===day).reduce((s,x)=>s+x.caf,0);
+  if(caf>st.cafLimit){
+    const f=getFlags();
+    if(f.cafWarnDate!==day){
+      f.cafWarnDate=day; setFlags(f);
+      showToast('☕ 今日咖啡因 '+Math.round(caf)+' mg，已超過上限 '+st.cafLimit+' mg','remind');
+    }
+  }
+  if(st.cafCutoffOn && e.caf>0 && tsHM(e.ts)>=parseHM(st.cafCutoff)){
+    showToast('⚠️ '+st.cafCutoff+' 之後攝取咖啡因，可能影響睡眠','remind');
+  }
+}
+
+/* ===== 寫入路徑：記錄當下依設定算好 factor、caf 存起來，改設定不會改到舊紀錄 ===== */
+async function addRecord(ts,ml,typeId,verb){
+  const st=getSet();
+  const t=typeById(st,typeId);
+  const e={ts,ml,type:t.id,factor:t.factor,caf:round1(ml*t.caf/100)};
+  await addEntry(e);
+  lastRemind=0;
+  await render();
+  const eff=Math.round(ml*t.factor);
+  showToast((verb||'已記錄')+' '+ml+' ml '+t.icon+' '+t.name+(t.factor!==1?'（有效 '+eff+' ml）':''));
+  await afterWarn(e);
+}
+
+/* ===== 繪製 ===== */
+function updateRing(sum,goal){
+  const pct=Math.min(100, goal>0?sum/goal*100:0);
+  $('ringFg').style.strokeDashoffset=(565.49*(1-pct/100)).toFixed(1);
+  $('sumToday').textContent=Math.round(sum);
+  $('goalLabel').textContent=goal;
+  $('pctLabel').textContent=Math.round(pct)+'%'+(pct>=100?' ✨ 今日達成！':'');
+}
+function renderTags(st){
+  const tr=$('typeRow'); tr.innerHTML='';
+  st.types.forEach(t=>{
+    const b=document.createElement('button');
+    b.className='tag'+(t.id===st.lastType?' on':''); b.id='tag-'+t.id;
+    b.textContent=t.icon+' '+t.name;
+    b.onclick=()=>{updateSet(s=>{s.lastType=t.id;}); renderTags(getSet());};
+    tr.appendChild(b);
+  });
+}
+/* 補登的飲品下拉：進入紀錄頁時預設跟隨今日頁目前選擇；改這裡不會改到今日頁 */
+function syncBkTypes(force){
+  const st=getSet(), sel=$('bkType'), cur=sel.value;
+  sel.innerHTML='';
+  st.types.forEach(t=>{
+    const o=document.createElement('option');o.value=t.id;
+    o.textContent=t.icon+' '+t.name;
+    sel.appendChild(o);
+  });
+  const keep=!force&&cur&&st.types.some(t=>t.id===cur);
+  sel.value=keep?cur:st.lastType;
+}
+function renderCups(st){
+  const q=$('qgrid'); q.innerHTML='';
+  st.cups.forEach((c,i)=>{
+    const b=document.createElement('button');
+    b.className='qbtn'; b.id='qbtn'+i;
+    b.innerHTML=esc(c.name)+'<span class="ml">'+c.ml+' ml</span>';
+    b.onclick=()=>{const s=getSet();addRecord(Date.now(),c.ml,c.drink==='follow'?s.lastType:c.drink,'已記錄');};
+    q.appendChild(b);
+  });
+  if(!st.cups.length){
+    const d=document.createElement('div'); d.className='empty';
+    d.textContent='沒有快速杯子，到設定裡新增一個吧。'; q.appendChild(d);
+  }
+}
+function setView(keyOrNull){
+  viewDate=keyOrNull;
+  const v=viewDate||dkey(Date.now());
+  $('bkDate').value=v;
+  closeEdit();
+  render();
+}
+function renderListHead(view,today){
+  $('dayLabel').textContent=(view===today)?'今日':(view.slice(5).replace('-','/')+' 週'+WD[new Date(view+'T00:00:00').getDay()]);
+  $('dayNext').disabled=(view>=today);
+  $('dayPick').value=view;
+}
+function makeRows(list,entries,st){
+  const sorted=entries.slice().sort((a,b)=>(b.ts-a.ts)||(b.id-a.id));
+  list.innerHTML='';
+  sorted.forEach(e=>{
+    const t=typeById(st,e.type);
+    const row=document.createElement('div');row.className='row';
+    const tm=document.createElement('span');tm.className='t';tm.textContent=fmtTime(e.ts);
+    const nm=document.createElement('span');nm.className='nm';nm.textContent=t.icon+' '+t.name+' ・ '+e.ml+' ml';
+    const sub=document.createElement('span');sub.className='sub';
+    if(e.factor!==1)sub.textContent='有效 '+Math.round(effOf(e))+' ml';
+    const x=document.createElement('span');x.className='x';x.textContent='✕';
+    x.onclick=async ev=>{ev.stopPropagation();await delEntry(e.id);await render();showToast('已刪除 '+e.ml+' ml');};
+    row.onclick=()=>openEdit(e,list.closest('.page'));
+    row.appendChild(tm);row.appendChild(nm);row.appendChild(sub);row.appendChild(x);list.appendChild(row);
+  });
+}
+function renderTodayList(todayE,st){
+  const list=$('listToday');
+  if(!todayE.length){list.innerHTML='<div class="empty">今天還沒喝水，先選飲品再按杯子紀錄吧～</div>'; return;}
+  makeRows(list,todayE,st);
+}
+function renderDayList(viewE,st,view){
+  const list=$('listDay');
+  if(!viewE.length){list.innerHTML='<div class="empty">那天沒有紀錄，可用下方「補登」加一筆。</div>'; return;}
+  makeRows(list,viewE,st);
+}
+function openEdit(e,host){
+  editId=e.id;
+  const st=getSet();
+  $('edDate').value=dkey(e.ts);
+  $('edTime').value=fmtTime(e.ts);
+  $('edMl').value=e.ml;
+  const sel=$('edType'); sel.innerHTML='';
+  st.types.forEach(t=>{
+    const o=document.createElement('option');o.value=t.id;
+    o.textContent=t.icon+' '+t.name;
+    if(t.id===e.type)o.selected=true;
+    sel.appendChild(o);
+  });
+  if(host)host.appendChild($('editCard'));
+  $('editCard').style.display='block';
+  $('editCard').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function closeEdit(){$('editCard').style.display='none'; editId=null;}
+function dateN(n){const d=new Date();d.setDate(d.getDate()+n);return dkey(d.getTime());}
+function renderStats(all,st){
+  const totals={};
+  all.forEach(e=>{const k=dkey(e.ts);totals[k]=(totals[k]||0)+effOf(e);});
+  let s=0,i=0;
+  if((totals[dateN(0)]||0)<st.goal)i=-1;
+  while((totals[dateN(i)]||0)>=st.goal&&i>-400){s++;i--;}
+  $('streakNum').textContent=s;
+  const bars=$('bars');bars.innerHTML='';
+  const max=Math.max(st.goal,...Array.from({length:7},(_,k)=>totals[dateN(k-6)]||0));
+  for(let i=-6;i<=0;i++){
+    const key=dateN(i),v=totals[key]||0;
+    const col=document.createElement('div');col.className='barcol';
+    col.title=key+'（有效 '+Math.round(v)+' ml）';
+    const bar=document.createElement('div');bar.className='bar'+(v>=st.goal?' met':'');
+    bar.style.height=Math.max(3,v/max*90)+'%';
+    const cap=document.createElement('div');cap.className='barcap';
+    cap.textContent=(i===0?'今':WD[new Date(key+'T00:00:00').getDay()])+(v>=st.goal?'✓':'');
+    col.onclick=()=>{setView(key===dkey(Date.now())?null:key); switchTab('records');};
+    col.appendChild(bar);col.appendChild(cap);bars.appendChild(col);
+  }
+  $('ivLabel').textContent=st.interval;
+}
+function renderCaf7(all,st){
+  const box=$('caf7'); box.innerHTML='';
+  const caf={};
+  all.forEach(e=>{const k=dkey(e.ts);caf[k]=(caf[k]||0)+e.caf;});
+  const max=Math.max(st.cafLimit,...Array.from({length:7},(_,k)=>caf[dateN(k-6)]||0),1);
+  for(let i=-6;i<=0;i++){
+    const key=dateN(i),v=caf[key]||0;
+    const row=document.createElement('div');row.className='cafrow';
+    const lb=document.createElement('span');lb.className='cafld';lb.textContent=key.slice(5).replace('-','/');
+    const track=document.createElement('i');
+    const fill=document.createElement('b');
+    fill.style.width=Math.min(100,v/max*100).toFixed(1)+'%';
+    fill.style.background=v>st.cafLimit?'linear-gradient(90deg,#ff7b54,#ff5470)':'linear-gradient(90deg,#ffb35c,#ff7b54)';
+    track.appendChild(fill);
+    const val=document.createElement('span');val.className='cafval';val.textContent=Math.round(v)+' mg';
+    row.appendChild(lb);row.appendChild(track);row.appendChild(val);
+    box.appendChild(row);
+  }
+  $('cafLimitLabel2').textContent=st.cafLimit;
+}
+async function render(){
+  const st=getSet(), all=(await getAll()).map(normEntry);
+  const today=dkey(Date.now());
+  const view=viewDate||today;
+  const todayE=all.filter(e=>dkey(e.ts)===today);
+  const viewE=all.filter(e=>dkey(e.ts)===view);
+  updateRing(todayE.reduce((s,e)=>s+effOf(e),0),st.goal);
+  $('realToday').textContent=Math.round(todayE.reduce((s,e)=>s+e.ml,0));
+  $('cafToday').textContent=Math.round(todayE.reduce((s,e)=>s+e.caf,0));
+  $('cafLimitLabel').textContent=st.cafLimit;
+  renderListHead(view,today);
+  renderTodayList(todayE,st);
+  renderDayList(viewE,st,view);
+  renderStats(all,st);
+  renderCaf7(all,st);
+  renderTags(st);
+  renderCups(st);
+  const d=new Date();
+  $('dateLabel').textContent=d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' 週'+WD[d.getDay()];
+}
+
+/* ===== 設定區 UI ===== */
+function renderSettingsTypes(st){
+  const box=$('typeRows'); box.innerHTML='';
+  st.types.forEach(t=>{
+    const row=document.createElement('div');row.className='trow';
+    const mk=(id,val,attrs)=>{
+      const inp=document.createElement('input');inp.id=id;inp.value=val;
+      Object.entries(attrs).forEach(([k,v])=>inp.setAttribute(k,v));
+      row.appendChild(inp);
+    };
+    mk('ti-'+t.id,t.icon,{maxlength:'4','aria-label':'圖示'});
+    mk('tn-'+t.id,t.name,{maxlength:'12','aria-label':'名稱'});
+    mk('tf-'+t.id,t.factor,{type:'number',step:'0.05',min:'0',max:'3','aria-label':'係數'});
+    mk('tc-'+t.id,t.caf,{type:'number',step:'1',min:'0',max:'999','aria-label':'咖啡因 mg/100ml'});
+    box.appendChild(row);
+  });
+  ['ti','tn','tf','tc'].forEach(p=>{
+    TYPE_IDS.forEach(id=>{
+      const el=$(p+'-'+id);
+      if(!el)return;
+      el.onchange=async()=>{
+        updateSet(s=>{
+          const t=s.types.find(x=>x.id===id);
+          if(p==='ti')t.icon=el.value.trim()||t.icon;
+          if(p==='tn')t.name=el.value.trim()||t.name;
+          if(p==='tf')t.factor=clamp(round4(numOr(el.value,t.factor)),0,3);
+          if(p==='tc')t.caf=clamp(round1(numOr(el.value,t.caf)),0,999);
+        });
+        el.blur();
+        await render();
+        syncBkTypes();
+      };
+    });
+  });
+}
+function renderSettingsCups(st){
+  const box=$('cupRows'); box.innerHTML='';
+  st.cups.forEach((c,i)=>{
+    const row=document.createElement('div');row.className='crow';
+    const nm=document.createElement('input');nm.value=c.name;nm.maxLength=8;nm.placeholder='名稱';nm.title='名稱';
+    const ml=document.createElement('input');ml.type='number';ml.value=c.ml;ml.min=1;ml.max=5000;ml.title='毫升';
+    const dr=document.createElement('select');dr.title='預設飲品';
+    const fo=document.createElement('option');fo.value='follow';fo.textContent='跟隨目前選擇';
+    if(c.drink==='follow')fo.selected=true;
+    dr.appendChild(fo);
+    st.types.forEach(t=>{
+      const op=document.createElement('option');op.value=t.id;
+      op.textContent=t.icon+' '+t.name;
+      if(t.id===c.drink)op.selected=true;
+      dr.appendChild(op);
+    });
+    const btns=document.createElement('div');btns.className='cbtns';
+    const up=document.createElement('button');up.className='mini';up.textContent='↑';up.title='上移';
+    const dn=document.createElement('button');dn.className='mini';dn.textContent='↓';dn.title='下移';
+    const rm=document.createElement('button');rm.className='mini';rm.textContent='✕';rm.title='刪除';
+    up.onclick=()=>{if(i>0){updateSet(s=>{const a=s.cups;[a[i-1],a[i]]=[a[i],a[i-1]];});renderSettingsCups(getSet());render();}};
+    dn.onclick=()=>{updateSet(s=>{const a=s.cups;const j=Math.min(a.length-1,i+1);[a[i],a[j]]=[a[j],a[i]];});renderSettingsCups(getSet());render();};
+    rm.onclick=()=>{updateSet(s=>{s.cups.splice(i,1);});renderSettingsCups(getSet());render();showToast('已刪除杯子');};
+    nm.onchange=async()=>{updateSet(s=>{s.cups[i].name=nm.value.trim()||'杯子';});await render();};
+    ml.onchange=async()=>{updateSet(s=>{s.cups[i].ml=clamp(Math.round(numOr(ml.value,240)),1,5000);ml.value=s.cups[i].ml;});await render();};
+    dr.onchange=async()=>{updateSet(s=>{s.cups[i].drink=dr.value;});await render();};
+    btns.appendChild(up);btns.appendChild(dn);btns.appendChild(rm);
+    row.appendChild(nm);row.appendChild(ml);row.appendChild(dr);row.appendChild(btns);
+    box.appendChild(row);
+  });
+}
+function loadSettingsUI(){
+  const st=getSet();
+  $('setGoal').value=st.goal;
+  $('setWeight').value=st.weight;
+  $('setInterval').value=String(st.interval);
+  $('setQStart').value=st.qStart;
+  $('setQEnd').value=st.qEnd;
+  $('setCafLimit').value=st.cafLimit;
+  $('setCafCutoff').value=st.cafCutoff;
+  $('setCafOn').checked=st.cafCutoffOn;
+  renderSettingsTypes(st);
+  renderSettingsCups(st);
+  updateNotifyBtn();
+}
+function updateNotifyBtn(){
+  const b=$('notifyBtn');
+  if(!('Notification' in window)){b.textContent='此瀏覽器不支援';b.disabled=true;return;}
+  if(Notification.permission==='granted'){b.textContent='已開啟 ✓';b.disabled=true;}
+  else if(Notification.permission==='denied'){b.textContent='已被拒絕（Safari 設定裡開）';b.disabled=true;}
+}
+
+/* ===== CSV 匯入匯出 ===== */
+function dupKeyOf(e){return dkey(e.ts)+' '+fmtTime(e.ts)+' '+e.ml+' '+e.type;}
+function mapType(s){
+  if(TYPE_IDS.includes(s))return s;
+  const hit=DEF_TYPES.find(t=>t.name===s);
+  if(hit)return hit.id;
+  return 'other';
+}
+function parseCsvRow(c){
+  const dm=(c[0]||'').match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  const tm=(c[1]||'').match(/^(\d{1,2}):(\d{2})/);
+  if(!dm||!tm)return null;
+  const y=+dm[1],mo=+dm[2],da=+dm[3],h=+tm[1],mi=+tm[2];
+  if(mo<1||mo>12||da<1||da>31||h>23||mi>59)return null;
+  const d=new Date(y,mo-1,da,h,mi,0,0);
+  if(d.getFullYear()!==y||d.getMonth()!==mo-1||d.getDate()!==da)return null;
+  const ts=d.getTime();
+  if(c.length>=6){
+    const ml=Math.round(parseFloat(c[3]));
+    if(!isFinite(ml)||ml<1||ml>10000)return null;
+    const eff=parseFloat(c[4]), caf=Math.max(0,round1(numOr(parseFloat(c[5]),0)));
+    const factor=(isFinite(eff)&&eff>=0)?clamp(round4(eff/ml),0,3):1;
+    return {ts,ml,type:mapType(c[2]),factor,caf};
+  }
+  if(c.length===3){
+    const ml=Math.round(parseFloat(c[2]));
+    if(!isFinite(ml)||ml<1||ml>10000)return null;
+    return {ts,ml,type:'water',factor:1,caf:0};
+  }
+  return null;
+}
+async function doImport(text){
+  const lines=String(text||'').replace(/^\uFEFF/,'').split(/\r?\n/);
+  const all=(await getAll()).map(normEntry);
+  const seen=new Set(all.map(dupKeyOf));
+  const toAdd=[]; let dup=0,bad=0,headSkipped=false;
+  for(const ln of lines){
+    if(!ln.trim())continue;
+    const c=ln.split(',').map(s=>s.trim());
+    if(!headSkipped&&c[0]==='日期'){headSkipped=true;continue;}
+    const e=parseCsvRow(c);
+    if(!e){bad++;continue;}
+    const k=dupKeyOf(e);
+    if(seen.has(k)){dup++;continue;}
+    seen.add(k); toAdd.push(e);
+  }
+  if(!toAdd.length&&!dup&&!bad){showToast('CSV 裡沒有可匯入的列');return;}
+  const ok=confirm('將新增 '+toAdd.length+' 筆、略過重複 '+dup+' 筆'+(bad?'、格式錯誤 '+bad+' 筆':'')+'\n確定匯入？');
+  if(!ok){showToast('已取消匯入');return;}
+  if(toAdd.length)await addMany(toAdd);
+  await render();
+  showToast('已匯入 '+toAdd.length+' 筆（略過重複 '+dup+(bad?'、格式錯誤 '+bad:'')+'）');
+}
+
+/* ===== 事件綁定 ===== */
+function bindUI(){
+  TABS.forEach(t=>{$('tab-'+t).onclick=()=>switchTab(t);});
+  $('addCustom').onclick=async()=>{
+    const v=parseInt($('customAmt').value,10);
+    if(!v||v<1||v>5000){showToast('請輸入 1–5000 的 ml');return;}
+    await addRecord(Date.now(),v,getSet().lastType,'已記錄');
+    $('customAmt').value='';
+  };
+  $('undoBtn').onclick=async()=>{
+    const all=(await getAll()).map(normEntry);
+    if(!all.length){showToast('沒有可復原的紀錄');return;}
+    const last=all.reduce((a,b)=>a.id>b.id?a:b);
+    await delEntry(last.id);await render();
+    showToast('已復原，扣除 '+last.ml+' ml');
+  };
+  $('dayPrev').onclick=()=>{
+    const cur=viewDate||dkey(Date.now());
+    const d=new Date(cur+'T00:00:00');d.setDate(d.getDate()-1);
+    setView(dkey(d.getTime()));
+  };
+  $('dayNext').onclick=()=>{
+    const cur=viewDate||dkey(Date.now());
+    const d=new Date(cur+'T00:00:00');d.setDate(d.getDate()+1);
+    const nk=dkey(d.getTime());
+    setView((nk>=dkey(Date.now()))?null:nk);
+  };
+  $('dayPick').onchange=()=>{
+    const v=$('dayPick').value;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return;
+    setView(v>=dkey(Date.now())?null:v);
+  };
+  $('bkType').onchange=()=>{/* 只影響補登本身，不動今日頁選擇 */};
+  $('bkAdd').onclick=async()=>{
+    const ds=$('bkDate').value,hs=$('bkTime').value,ml=parseInt($('bkAmt').value,10);
+    const dm=ds&&ds.match(/^(\d{4})-(\d{2})-(\d{2})$/), hm=hs&&hs.match(/^(\d{2}):(\d{2})$/);
+    if(!dm||!hm){showToast('請選擇日期與時間');return;}
+    if(!ml||ml<1||ml>5000){showToast('請輸入 1–5000 的 ml');return;}
+    const ts=new Date(+dm[1],+dm[2]-1,+dm[3],+hm[1],+hm[2],0,0).getTime();
+    if(ts>Date.now()){showToast('時間不可選未來喔');return;}
+    const type=$('bkType').value;
+    await addRecord(ts,ml,type,'已補登');
+    setView(ds);
+  };
+  $('edCancel').onclick=closeEdit;
+  $('edSave').onclick=async()=>{
+    if(editId==null)return;
+    const ds=$('edDate').value,hs=$('edTime').value,ml=parseInt($('edMl').value,10);
+    const dm=ds&&ds.match(/^(\d{4})-(\d{2})-(\d{2})$/), hm=hs&&hs.match(/^(\d{2}):(\d{2})$/);
+    if(!dm||!hm){showToast('請選擇日期與時間');return;}
+    if(!ml||ml<1||ml>5000){showToast('請輸入 1–5000 的 ml');return;}
+    const ts=new Date(+dm[1],+dm[2]-1,+dm[3],+hm[1],+hm[2],0,0).getTime();
+    if(ts>Date.now()){showToast('時間不可選未來喔');return;}
+    const raw=(await getAll()).find(x=>x.id===editId);
+    if(!raw){showToast('這筆紀錄不見了');closeEdit();await render();return;}
+    const st=getSet(),t=typeById(st,$('edType').value);
+    const caf=round1(ml*t.caf/100);
+    await putEntry({id:editId,ts,ml,type:t.id,factor:t.factor,caf});
+    closeEdit();lastRemind=0;await render();showToast('已更新這筆紀錄');
+    await afterWarn(normEntry({id:editId,ts,ml,type:t.id,factor:t.factor,caf}));
+  };
+  $('setGoal').onchange=async()=>{const st=getSet();st.goal=Math.max(500,Math.min(6000,parseInt($('setGoal').value,10)||2000));$('setGoal').value=st.goal;saveSet(st);await render();};
+  $('setWeight').onchange=()=>{const st=getSet();st.weight=parseFloat($('setWeight').value)||'';saveSet(st);};
+  $('setInterval').onchange=async()=>{const st=getSet();st.interval=parseInt($('setInterval').value,10);saveSet(st);await render();lastRemind=0;};
+  $('setQStart').onchange=()=>{const st=getSet();st.qStart=$('setQStart').value;saveSet(st);};
+  $('setQEnd').onchange=()=>{const st=getSet();st.qEnd=$('setQEnd').value;saveSet(st);};
+  $('setCafLimit').onchange=async()=>{const st=getSet();st.cafLimit=clamp(Math.round(numOr($('setCafLimit').value,400)),50,2000);$('setCafLimit').value=st.cafLimit;saveSet(st);await render();renderCaf7((await getAll()).map(normEntry),getSet());};
+  $('setCafCutoff').onchange=()=>{const st=getSet();st.cafCutoff=$('setCafCutoff').value||'15:00';saveSet(st);};
+  $('setCafOn').onchange=()=>{const st=getSet();st.cafCutoffOn=$('setCafOn').checked;saveSet(st);};
+  $('suggestBtn').onclick=()=>{
+    const w=parseFloat($('setWeight').value);
+    if(!w||w<20||w>200){$('suggestInfo').textContent='請先輸入體重喔';return;}
+    const goal=Math.round(w*33/50)*50;
+    $('setGoal').value=goal;$('suggestInfo').textContent='已套用：'+w+'kg × 33ml ≈ '+goal+'ml';
+    const st=getSet();st.goal=goal;saveSet(st);render();
+  };
+  $('notifyBtn').onclick=async()=>{
+    if(!('Notification' in window))return;
+    try{await navigator.serviceWorker.ready;}catch(e){}
+    const p=await Notification.requestPermission();updateNotifyBtn();
+    if(p==='granted')showToast('通知已開啟 🔔');
+  };
+  $('exportBtn').onclick=async()=>{
+    const all=(await getAll()).map(normEntry);
+    if(!all.length){showToast('還沒有資料可以匯出');return;}
+    all.sort((a,b)=>a.ts-b.ts);
+    const rows=[['日期','時間','飲品','實際毫升','有效毫升','咖啡因mg']];
+    all.forEach(e=>rows.push([dkey(e.ts),fmtTime(e.ts),e.type,e.ml,fmtNum(effOf(e)),fmtNum(e.caf)]));
+    const csv='\uFEFF'+rows.map(r=>r.join(',')).join('\n');
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+    a.download='喝水紀錄_'+dkey(Date.now())+'.csv';
+    document.body.appendChild(a);a.click();a.remove();
+    showToast('CSV 已產生，用「檔案」或 AirDrop 存起來');
+  };
+  $('importBtn').onclick=()=>$('importFile').click();
+  $('importFile').onchange=async ev=>{
+    const f=ev.target.files&&ev.target.files[0];
+    if(!f)return;
+    const text=await f.text();
+    ev.target.value='';
+    try{await doImport(text);}
+    catch(e){showToast('匯入失敗：'+(e&&e.message||e));}
+  };
+  $('resetTypesBtn').onclick=async()=>{
+    updateSet(s=>{s.types=clone(DEF_TYPES);});
+    loadSettingsUI();syncBkTypes();await render();
+    showToast('飲品種類已恢復預設');
+  };
+  $('addCupBtn').onclick=async()=>{
+    const st=getSet();
+    if(st.cups.length>=8){showToast('最多 8 個杯子喔');return;}
+    updateSet(s=>{s.cups.push({name:'杯子',ml:250,drink:'follow'});});
+    renderSettingsCups(getSet());await render();
+  };
+  $('resetBtn').onclick=async()=>{
+    if(!confirm('確定要清除所有喝水紀錄與設定嗎？（不可復原）'))return;
+    await clearAll();localStorage.removeItem(SET_KEY);localStorage.removeItem(FLAG_KEY);
+    lastRemind=0;viewDate=null;
+    loadSettingsUI();syncBkTypes();await render();showToast('已清空');
+  };
+}
+
+function scheduleMidnight(){
+  const n=new Date(),m=new Date(n);
+  m.setHours(24,0,1,0);
+  setTimeout(async()=>{lastRemind=0;viewDate=null;await render();scheduleMidnight();}, m-n);
+}
+
+(async function init(){
+  try{
+    await openDB();
+  }catch(e){
+    document.body.innerHTML='<p style="padding:30px">此瀏覽器不支援 IndexedDB，請改用 Safari。</p>';return;
+  }
+  bindUI();
+  loadSettingsUI();
+  const n=new Date();
+  $('bkDate').value=dkey(n.getTime());
+  $('bkTime').value=fmtTime(n.getTime());
+  syncBkTypes();
+  const saved=(()=>{try{return localStorage.getItem(TAB_KEY);}catch(e){return null;}})();
+  switchTab(TABS.includes(saved)?saved:'today');
+  await render();
+  scheduleMidnight();
+  setInterval(checkRemind,30000);
+  if('serviceWorker' in navigator && location.protocol!=='file:'){
+    try{await navigator.serviceWorker.register('sw.js');}catch(e){}
+  }
+})();
+</script>
+</body>
+</html>
